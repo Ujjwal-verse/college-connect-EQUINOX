@@ -88,11 +88,18 @@ await signin('student-02');let feed=(await (await tickets.GET()).json()).tickets
 await signin('student-01');r=await community.POST(req({body:'Please update us on this repair.',anonymous:true,ticketId:anonymous.id}));eq(r.status,201);const messageId=(await r.json()).id;
 eq((await community.POST(req({body:'Too soon'}))).status,429);eq((await community.POST(req({body:'x'.repeat(1001)}))).status,400);
 await signin('student-02');let messages=(await (await community.GET(new Request('https://campus.test/api/community'))).json()).messages;let message=messages.find(m=>m.id===messageId);eq(message.author,'Anonymous student');eq(message.isMine,false);eq(message.sender_key,undefined);eq((await community.PATCH(req({id:messageId},'PATCH'))).status,403);
-await signin('faculty-dean');messages=(await (await community.GET(new Request('https://campus.test/api/community'))).json()).messages;eq(messages.find(m=>m.id===messageId).author,'Updated Student');
+await signin('faculty-dean');eq((await community.GET(new Request('https://campus.test/api/community'))).status,403);
 await auth.DELETE(req({},'DELETE'));globalThis.__ccTest.owner='second-site-account';globalThis.__ccTest.token=null;await signin('student-01');feed=(await (await tickets.GET()).json()).tickets;peer=feed.find(x=>x.id===anonymous.id);eq(peer.isMine,false);eq(peer.reporterName,undefined);eq((await tickets.PATCH(req({id:claimTicket.id,version:claimTicket.version,action:'remind'},'PATCH'))).status,403);messages=(await (await community.GET(new Request('https://campus.test/api/community'))).json()).messages;eq(messages.some(m=>m.id===messageId),true);eq(messages.find(m=>m.id===messageId).author,'Anonymous student');
 // Legacy reports stay in their original owner scope.
 eq(feed.some(x=>/^CC-D[0-5]-/.test(x.id)),false);
-await signin('faculty-dean');eq((await community.PATCH(req({id:messageId},'PATCH'))).status,200);messages=(await (await community.GET(new Request('https://campus.test/api/community'))).json()).messages;eq(messages.find(m=>m.id===messageId).body,'Message removed by a moderator.');
+// The student community is student-only. The official committee channel is shared across roles.
+await signin('student-01');r=await community.POST(req({channel:'committee',body:'Official campus committee update.'}));eq(r.status,201);const committeeId=(await r.json()).id;
+let committeeRequest=()=>new Request('https://campus.test/api/community?channel=committee');let studentCommittee=(await (await community.GET(committeeRequest())).json()).messages;eq(studentCommittee.some(m=>m.id===committeeId),true);
+eq((await studentCommittee.find(m=>m.id===committeeId)).anonymous,false);
+await signin('staff-plumbing');eq((await community.GET(new Request('https://campus.test/api/community?channel=community'))).status,403);
+let staffCommittee=(await (await community.GET(committeeRequest())).json()).messages;eq(staffCommittee.some(m=>m.id===committeeId),true);eq((await community.POST(req({channel:'community',body:'This should be blocked'}))).status,403);
+await signin('faculty-dean');let facultyCommittee=(await (await community.GET(committeeRequest())).json()).messages;eq(facultyCommittee.some(m=>m.id===committeeId),true);
+await signin('faculty-dean');eq((await community.PATCH(req({id:messageId},'PATCH'))).status,200);await signin('student-01');messages=(await (await community.GET(new Request('https://campus.test/api/community'))).json()).messages;eq(messages.find(m=>m.id===messageId).body,'Message removed by a moderator.');
 await auth.DELETE(req({},'DELETE'));globalThis.__ccTest.owner='test-owner';globalThis.__ccTest.token=null;await signin('student-01');
 const oldToken=globalThis.__ccTest.token;await auth.DELETE(req({},'DELETE'));eq((await tickets.GET()).status,401);globalThis.__ccTest.token=oldToken;eq((await tickets.GET()).status,401);
 await signin('faculty-dean');globalThis.__ccTest.owner='different-owner';eq((await tickets.GET()).status,401);globalThis.__ccTest.owner=null;eq((await auth.POST(req(accounts[0]))).status,401);

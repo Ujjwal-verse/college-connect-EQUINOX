@@ -70,3 +70,20 @@ image-capable Gemini model available to your Google project in the Site runtime
 settings, then redeploy. Never place a key in browser code or commit it to GitHub.
 No key was configured when this integration was added; live inference remains
 unavailable until configured. Mocked integration tests do not verify a live model.
+
+### Separate student community and official campus committee
+
+The student **Community** channel is visible and writable by student accounts only.
+Staff accounts cannot read or post to that channel. **Campus Committee** is a
+separate shared channel available to students, staff, and faculty. Committee
+posts use the author's name and are visible across all roles. These are demo
+roles; account access is not verified against a university directory.
+
+### Source package layout
+
+The downloadable organized bundle groups the UI under `frontend/`, API and shared
+logic under `backend/`, schema and ordered migrations under `database/`, and
+runtime/build configuration under `server/`. `complete-project/` preserves the
+original runnable repository paths. To run locally, use Node.js 22+, install
+with `pnpm install`, configure local Site auth/database bindings as appropriate,
+then run `pnpm dev`. Never put production API keys in the source package.

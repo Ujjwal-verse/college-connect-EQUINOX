@@ -29,6 +29,13 @@
       "when": 1792785535784,
       "tag": "0003_far_maximus",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "6",
+      "when": 1792801000000,
+      "tag": "0004_community_channels",
+      "breakpoints": true
     }
   ]
 }
