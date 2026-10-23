@@ -8,7 +8,7 @@ import ts from 'typescript';
 const root=process.cwd(),out=path.join(root,'.sites-runtime','role-tests');await fs.mkdir(out,{recursive:true});
 const files=['lib/accounts.ts','lib/rules.ts','lib/session.ts','app/api/session/route.ts','app/api/tickets/route.ts','app/api/demo/route.ts','app/api/analyze/route.ts'];
 for(const f of files){let code=await fs.readFile(path.join(root,f),'utf8');code=ts.transpileModule(code,{compilerOptions:{target:ts.ScriptTarget.ES2022,module:ts.ModuleKind.ES2022}}).outputText;code=code.replace(/from ["']cloudflare:workers["']/g,"from '"+path.join(out,'mocks.mjs')+"'").replace(/from ["']next\/headers["']/g,"from '"+path.join(out,'mocks.mjs')+"'").replace(/from ["'][^"']*chatgpt-auth["']/g,"from '"+path.join(out,'mocks.mjs')+"'").replace(/from (["'])(\.[^"']+)\1/g,(_,q,s)=>`from ${q}${s}.mjs${q}`);const dest=path.join(out,f.replace(/\.ts$/,'.mjs'));await fs.mkdir(path.dirname(dest),{recursive:true});await fs.writeFile(dest,code);}
-await fs.writeFile(path.join(out,'mocks.mjs'),`export const env=globalThis.__ccTest.env;export async function cookies(){return {get:()=>globalThis.__ccTest.token?{value:globalThis.__ccTest.token}:undefined}};export async function getChatGPTUser(){return globalThis.__ccTest.owner?{userId:globalThis.__ccTest.owner}:null}`);
+await fs.writeFile(path.join(out,'mocks.mjs'),`export const env=globalThis.__ccTest.env;export async function headers(){return new Headers({'x-campus-session':globalThis.__ccTest.token||''})};export async function getChatGPTUser(){return globalThis.__ccTest.owner?{userId:globalThis.__ccTest.owner}:null}`);
 const sqlite=new DatabaseSync(':memory:');for(const f of (await fs.readdir('drizzle')).filter(f=>f.endsWith('.sql')).sort())sqlite.exec(await fs.readFile('drizzle/'+f,'utf8'));
 const db={
  prepare(sql){
@@ -25,8 +25,8 @@ const db={
 globalThis.__ccTest={env:{DB:db},owner:'test-owner',token:null};
 const auth=await import(path.join(out,'app/api/session/route.mjs')),tickets=await import(path.join(out,'app/api/tickets/route.mjs')),demo=await import(path.join(out,'app/api/demo/route.mjs')),analyze=await import(path.join(out,'app/api/analyze/route.mjs'));
 const {accounts}=await import(path.join(out,'lib/accounts.mjs'));
-const req=(body={},method='POST',origin='https://campus.test')=>new Request('https://campus.test/api/test',{method,headers:{'Content-Type':'application/json',Origin:origin},body:JSON.stringify(body)});
-async function signin(id){const a=accounts.find(a=>a.id===id);const r=await auth.POST(req(a));assert.equal(r.status,200);globalThis.__ccTest.token=r.headers.get('set-cookie').split(';')[0].split('=')[1];const d=await r.json();assert.equal(d.user.id,id);assert.equal(d.user.key,undefined);assert.match(r.headers.get('set-cookie'),/HttpOnly; Secure; SameSite=Strict/);}
+const req=(body={},method='POST',origin='https://campus.test')=>new Request('https://campus.test/api/test',{method,headers:{'Content-Type':'application/json',Origin:origin,'x-campus-session':globalThis.__ccTest.token||''},body:JSON.stringify(body)});
+async function signin(id){const a=accounts.find(a=>a.id===id);const r=await auth.POST(req(a));assert.equal(r.status,200);const d=await r.json();globalThis.__ccTest.token=d.token;assert.equal(d.user.id,id);assert.equal(d.user.key,undefined);assert.equal(r.headers.get('Cache-Control'),'no-store');}
 let checks=0;function eq(a,b){assert.deepEqual(a,b);checks++}
 eq((await tickets.GET()).status,401);
 eq((await auth.POST(req({role:'faculty',email:'dean@demo.university.test',key:'wrong'}))).status,401);
@@ -40,7 +40,7 @@ let r=await tickets.POST(req({...body,reporterId:'student-02',assigneeId:'staff-
 let patch=(extra={})=>req({id:t.id,version:t.version,note:'A meaningful test update.',...extra},'PATCH');
 eq((await tickets.PATCH(patch({action:'assign',assigneeId:'staff-plumbing'}))).status,403);
 await signin('student-02');eq((await (await tickets.GET()).json()).tickets.length,0);eq((await tickets.PATCH(patch({action:'verify'}))).status,403);
-await signin('staff-plumbing');eq((await (await tickets.GET()).json()).tickets.length,0);eq((await tickets.PATCH(patch({action:'start'}))).status,403);eq((await tickets.POST(req(body))).status,403);
+await signin('staff-plumbing');eq((await (await tickets.GET()).json()).tickets.length,1);eq((await tickets.PATCH(patch({action:'start'}))).status,403);eq((await tickets.POST(req(body))).status,403);
 await signin('faculty-dean');eq((await (await tickets.GET()).json()).tickets.length,1);eq((await tickets.PATCH(patch({action:'assign',assigneeId:'staff-internet'}))).status,400);
 r=await tickets.PATCH(patch({action:'assign',assigneeId:'staff-plumbing'}));eq(r.status,200);t=await r.json();eq(t.status,'Assigned');
 eq((await tickets.PATCH(req({id:t.id,version:1,action:'note',note:'Stale update should be rejected'},'PATCH'))).status,409);
@@ -49,6 +49,7 @@ await signin('staff-plumbing');eq((await (await tickets.GET()).json()).tickets.l
 r=await tickets.PATCH(patch({action:'start'}));eq(r.status,200);t=await r.json();eq(t.status,'In progress');r=await tickets.PATCH(patch({action:'complete',note:'Replaced the washer and tested the tap.'}));eq(r.status,200);t=await r.json();eq(t.status,'Awaiting verification');eq((await tickets.PATCH(patch({action:'verify'}))).status,403);
 await signin('student-01');r=await tickets.PATCH(patch({action:'verify',note:'I checked the tap and the leak has stopped.'}));eq(r.status,200);t=await r.json();eq(t.status,'Resolved');eq(t.history.length,5);r=await tickets.PATCH(patch({action:'reopen',note:'The leak has started again. Please check.'}));eq(r.status,200);t=await r.json();eq(t.status,'Assigned');
 await signin('faculty-warden');eq((await demo.POST(req())).status,200);eq((await (await demo.POST(req())).json()).added,0);let all=(await (await tickets.GET()).json()).tickets;eq(all.length,7);eq(new Set(all.map(x=>x.status)).size,5);const other=all.find(x=>x.id!==t.id&&x.category==='Plumbing');r=await tickets.PATCH(patch({action:'link',linkedTo:other.id,note:'Reviewed: same tap and location. Preserve both reports.'}));eq(r.status,200);t=await r.json();eq(t.linkedTo,other.id);
-const oldToken=globalThis.__ccTest.token;await auth.DELETE(new Request('https://campus.test/api/session',{method:'DELETE',headers:{Origin:'https://campus.test'}}));eq((await tickets.GET()).status,401);globalThis.__ccTest.token=oldToken;eq((await tickets.GET()).status,401);
+await signin('student-01');r=await tickets.POST(req({...body,title:'Urgent anonymous leak',anonymous:true,priority:'emergency'}));eq(r.status,201);const anonymous=await r.json();eq(anonymous.reporterId,undefined);eq(anonymous.reporterName,undefined);eq(anonymous.priority,'emergency');eq(anonymous.status,'Assigned');await signin('faculty-dean');const anonymized=(await (await tickets.GET()).json()).tickets.find(x=>x.id===anonymous.id);eq(anonymized.anonymous,true);eq(anonymized.reporterName,undefined);eq(anonymized.history[0].actor,'Anonymous student');
+const oldToken=globalThis.__ccTest.token;await auth.DELETE(req({},'DELETE'));eq((await tickets.GET()).status,401);globalThis.__ccTest.token=oldToken;eq((await tickets.GET()).status,401);
 await signin('faculty-dean');globalThis.__ccTest.owner='different-owner';eq((await tickets.GET()).status,401);globalThis.__ccTest.owner=null;eq((await auth.POST(req(accounts[0]))).status,401);
 console.log('PASS: '+checks+' assertions across role permissions, workflow stages, persistence, isolation, duplicate linking, login and logout.');
