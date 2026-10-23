@@ -87,3 +87,5 @@ runtime/build configuration under `server/`. `complete-project/` preserves the
 original runnable repository paths. To run locally, use Node.js 22+, install
 with `pnpm install`, configure local Site auth/database bindings as appropriate,
 then run `pnpm dev`. Never put production API keys in the source package.
+
+Faculty can close any active report from any workflow stage, including fire alerts. Closure marks the report Resolved, records a timeline note, and clears it from active emergency queues. Workers retain the staged completion and verification workflow.
