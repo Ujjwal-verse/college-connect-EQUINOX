@@ -1,6 +1,6 @@
 # CampusConnect
 
-Private campus maintenance demo with a login-first interface and separate student, working staff and faculty dashboards. Scope: one campus and plumbing, electricity, cleanliness and internet complaints.
+Campus maintenance demo with a login-first interface and separate student, working staff and faculty dashboards. Scope: one campus and plumbing, electricity, cleanliness and internet complaints.
 
 ## Roles and workflow
 - Students create reports with location and optional photo, review extracted details, view only their reports, and verify/reopen fixes.
@@ -22,7 +22,7 @@ Private campus maintenance demo with a login-first interface and separate studen
 | Dean Kavya | — | dean@demo.university.test | DEAN-DEMO-26 |
 | Warden Ananya | — | warden@demo.university.test | WARDEN-DEMO-26 |
 
-These are sample credentials for the private demo. `.test` email addresses and zero-prefixed phone values are fictional and no emails/SMS are sent. App role sessions are eight-hour opaque per-tab tokens stored hashed in D1 and bound to the outer Site user. Different outer Site owners have isolated demo data. This is not production university authentication: there is no real roster, email verification, phone OTP or account provisioning. Do not widen the Site's audience for real campus use without replacing sample identities with verified membership.
+These are sample credentials for the demo. `.test` email addresses and zero-prefixed phone values are fictional and no emails/SMS are sent. App role sessions are eight-hour opaque per-tab tokens stored hashed in D1 and bound to the outer Site user. Different outer Site users have isolated demo data; to connect separate real campus users, provision a shared campus tenant and verified membership. This is not production university authentication: there is no real roster, email verification, phone OTP or account provisioning. Do not widen the Site's audience for real campus use without replacing sample identities with verified membership.
 
 ## Presenting the demo
 1. Sign in as Dean. Open Demo access & setup and load six examples (idempotent; existing reports preserved).
