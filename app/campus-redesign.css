@@ -20,3 +20,13 @@
 @media(max-width:1000px){.community-layout{grid-template-columns:1fr}.community-context{display:none}.community-entry{flex-wrap:wrap}.community-entry>div{flex-basis:100%}.community-heading{align-items:flex-start;flex-direction:column;gap:10px}.community-heading h1{font-size:36px}}@media(max-width:600px){.community-messages,.community-composer{padding:16px}.composer-options{align-items:stretch;flex-direction:column;gap:12px}.community-room-heading{padding:18px;flex-wrap:wrap}.community-room-heading small{margin-left:0}.composer-footer{align-items:flex-start;flex-direction:column}.community-message{padding:14px}.community-heading h1{font-size:31px}}
 
 .emergency-camera{border:1px solid #e6cbc3;border-radius:18px;padding:16px;background:#fff9f5;margin:18px 0;color:#3b302c}.camera-heading{display:flex;gap:10px;align-items:center;margin-bottom:12px}.camera-heading strong,.camera-heading small{display:block}.emergency-camera small{display:block;font-size:11px;line-height:1.6;color:#71645e}.camera-view{display:block;width:100%;max-height:260px;min-height:160px;object-fit:contain;border-radius:12px;background:#241e1c}.camera-actions{display:flex;flex-wrap:wrap;gap:8px;margin:12px 0}.camera-actions button{display:flex;align-items:center;gap:6px;padding:10px 12px;border:1px solid #ddc8bf;background:white;border-radius:9px;font-size:12px;cursor:pointer}.camera-actions button:disabled{opacity:.5;cursor:default}.camera-feedback{color:#9c3526;font-size:12px;line-height:1.5}.camera-result{padding:12px;background:#f2e9dc;border-radius:10px;margin-top:12px;font-size:12px;line-height:1.6}
+
+/* The fire form is nested inside the dialog: it must shrink so its body can scroll. */
+.fire-dialog-overlay{padding:12px}
+.fire-dialog{max-height:calc(100vh - 24px);max-height:calc(100dvh - 24px);min-height:0}
+.fire-dialog-heading{flex:0 0 auto}
+.fire-dialog>form{display:flex;flex-direction:column;flex:1 1 auto;min-height:0;overflow:hidden}
+.fire-dialog>form>.dialog-body{flex:1 1 auto;min-height:0;overflow-y:auto;overscroll-behavior-y:contain;-webkit-overflow-scrolling:touch;scrollbar-gutter:stable}
+.fire-dialog>form>.dialog-body>*{flex-shrink:0}
+.fire-dialog-footer{flex:0 0 auto;background:white;border-top:1px solid #eeddd5;padding:14px 28px 16px}
+@media(max-height:650px){.fire-dialog-heading{padding:14px 22px}.fire-dialog-heading>span{display:none}.fire-dialog-heading h2{font-size:27px}.fire-dialog-heading>p:first-of-type{margin-bottom:4px}.fire-dialog-heading>p:last-of-type{margin-top:4px}.fire-dialog-footer{padding:10px 20px}.fire-dialog-footer>small{margin-top:5px}.fire-send-button{min-height:42px}}
