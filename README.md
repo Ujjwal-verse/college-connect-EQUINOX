@@ -45,3 +45,11 @@ React + TypeScript + Vinext, Cloudflare D1, Sites hosting. Managed database repl
 
 ## Four-person ownership
 Student reporting and UI; staff workspace and repair UX; backend/auth and faculty coordination; Gemini evaluation, demo guide and QA. Split the main client component before concurrent edits. Final campus rollout also requires verified membership, rate limits, pagination and a real campus routing guide.
+
+## Shared campus community (October 2026 update)
+
+New reports and community messages use one shared **demo campus** across authenticated Site accounts. The Community view supports persistent messages, links to campus reports, three-second refresh, earlier-message loading, and faculty moderation. Campus reports are visible to students; My reports remains limited to the reporter's own work.
+
+For new anonymous reports/messages, identity is hidden from other students but visible to staff/faculty. Peer report responses exclude reporter IDs, internal ownership keys, photos, GPS coordinates and private work-note text. Ownership uses both the Site account and demo account, so selecting the same demo student on a different Site account does not grant control of their reports. Older reports retain their original scope and anonymity rather than being silently republished.
+
+This is not verified university membership: the role credentials remain intentionally public demo credentials. Use fictional sample content only until real campus authentication is implemented. Profiles and event RSVPs remain account-scoped. Community schema is in migration 0003; apply migrations before serving the new API. Route tests now include shared visibility, peer anonymity, ownership isolation, message validation, rate limiting and moderation.
