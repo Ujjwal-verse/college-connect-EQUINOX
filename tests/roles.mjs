@@ -26,12 +26,13 @@ globalThis.__ccTest={env:{DB:db},owner:'test-owner',token:null};
 const auth=await import(path.join(out,'app/api/session/route.mjs')),tickets=await import(path.join(out,'app/api/tickets/route.mjs')),demo=await import(path.join(out,'app/api/demo/route.mjs')),analyze=await import(path.join(out,'app/api/analyze/route.mjs'));
 const {accounts}=await import(path.join(out,'lib/accounts.mjs'));
 const req=(body={},method='POST',origin='https://campus.test')=>new Request('https://campus.test/api/test',{method,headers:{'Content-Type':'application/json',Origin:origin,'x-campus-session':globalThis.__ccTest.token||''},body:JSON.stringify(body)});
-async function signin(id){const a=accounts.find(a=>a.id===id);const r=await auth.POST(req(a));assert.equal(r.status,200);const d=await r.json();globalThis.__ccTest.token=d.token;assert.equal(d.user.id,id);assert.equal(d.user.key,undefined);assert.equal(r.headers.get('Cache-Control'),'no-store');}
+async function signin(id){if(globalThis.__ccTest.token)await auth.DELETE(req({},'DELETE'));const a=accounts.find(a=>a.id===id);const r=await auth.POST(req(a));assert.equal(r.status,200);const d=await r.json();globalThis.__ccTest.token=d.token;assert.equal(d.user.id,id);assert.equal(d.user.key,undefined);assert.equal(r.headers.get('Cache-Control'),'no-store');}
 let checks=0;function eq(a,b){assert.deepEqual(a,b);checks++}
 eq((await tickets.GET()).status,401);
 eq((await auth.POST(req({role:'faculty',email:'dean@demo.university.test',key:'wrong'}))).status,401);
 eq((await auth.POST(req(accounts[0],'POST','https://other.test'))).status,403);
 await signin('student-01');
+eq((await auth.POST(req(accounts.find(a=>a.id==='staff-plumbing')))).status,409);
 eq((await demo.POST(req())).status,403);
 const a=await analyze.POST(req({description:'A tap is leaking water',location:''}));const ad=await a.json();eq(ad.mode,'rules');eq(ad.category,'Plumbing');eq(ad.questions.length>0,true);
 const body={title:'Leaking laboratory tap',description:'Water is leaking from the tap near the chemistry laboratory.',location:'Science Block · Ground floor',category:'Plumbing'};
