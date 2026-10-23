@@ -93,3 +93,14 @@ with `pnpm install`, configure local Site auth/database bindings as appropriate,
 then run `pnpm dev`. Never put production API keys in the source package.
 
 Faculty can close any active report from any workflow stage, including fire alerts. Closure marks the report Resolved, records a timeline note, and clears it from active emergency queues. Workers retain the staged completion and verification workflow.
+
+## Project sections
+
+The runnable app stays at the repository root so existing build and deployment commands keep working. These guides map its source into the four requested layers:
+
+- [Frontend](frontend/README.md)
+- [Backend](backend/README.md)
+- [Database](database/README.md)
+- [Server and configuration](server/README.md)
+
+Gemini image analysis is server-side and used only for emergency photo detection. Set `GEMINI_API_KEY` as a secret in the hosting provider and set `GEMINI_MODEL` to `gemini-2.5-flash`. Never commit the actual key; use the placeholder in [server/GEMINI_CONFIG.example](server/GEMINI_CONFIG.example) as a local configuration template.

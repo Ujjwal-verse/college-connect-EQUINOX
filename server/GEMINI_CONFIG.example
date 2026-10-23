@@ -1,0 +1,3 @@
+# Template only. Add the real API key to an ignored .dev.vars file or host secret settings.
+GEMINI_API_KEY=replace_with_your_secret
+GEMINI_MODEL=gemini-2.5-flash
