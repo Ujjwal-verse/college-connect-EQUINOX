@@ -53,3 +53,20 @@ New reports and community messages use one shared **demo campus** across authent
 For new anonymous reports/messages, identity is hidden from other students but visible to staff/faculty. Peer report responses exclude reporter IDs, internal ownership keys, photos, GPS coordinates and private work-note text. Ownership uses both the Site account and demo account, so selecting the same demo student on a different Site account does not grant control of their reports. Older reports retain their original scope and anonymity rather than being silently republished.
 
 This is not verified university membership: the role credentials remain intentionally public demo credentials. Use fictional sample content only until real campus authentication is implemented. Profiles and event RSVPs remain account-scoped. Community schema is in migration 0003; apply migrations before serving the new API. Route tests now include shared visibility, peer anonymity, ownership isolation, message validation, rate limiting and moderation.
+
+### Emergency camera and Gemini image analysis
+
+Opening fire reporting or enabling emergency priority opens the rear-facing camera
+when available (browser permission is required). Capture is optional. Camera tracks
+stop after capture, on dialog closure, and when the page becomes hidden.
+Only the explicit **Analyse with Gemini** button sends a captured image to Google.
+Normal report review uses text rules and does not forward photos to any AI.
+The authenticated `/api/emergency-image` endpoint accepts student emergency requests
+only, validates image input, keeps credentials server-side, and returns an unverified
+visual observation. Failures and missing configuration never prevent sending alerts.
+
+To enable live analysis, set `GEMINI_API_KEY` as a secret and `GEMINI_MODEL` to an
+image-capable Gemini model available to your Google project in the Site runtime
+settings, then redeploy. Never place a key in browser code or commit it to GitHub.
+No key was configured when this integration was added; live inference remains
+unavailable until configured. Mocked integration tests do not verify a live model.

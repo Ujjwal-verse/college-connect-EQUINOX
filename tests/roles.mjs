@@ -6,7 +6,7 @@ import assert from 'node:assert/strict';
 import {DatabaseSync} from 'node:sqlite';
 import ts from 'typescript';
 const root=process.cwd(),out=path.join(root,'.sites-runtime','role-tests');await fs.mkdir(out,{recursive:true});
-const files=['lib/accounts.ts','lib/rules.ts','lib/session.ts','lib/profile.ts','lib/community.ts','app/api/community/route.ts','lib/events.ts','app/api/profile/route.ts','app/api/events/route.ts','app/api/session/route.ts','app/api/tickets/route.ts','app/api/demo/route.ts','app/api/analyze/route.ts'];
+const files=['lib/accounts.ts','lib/rules.ts','lib/session.ts','lib/profile.ts','lib/community.ts','app/api/community/route.ts','lib/events.ts','app/api/profile/route.ts','app/api/events/route.ts','app/api/session/route.ts','app/api/tickets/route.ts','app/api/demo/route.ts','app/api/analyze/route.ts','app/api/emergency-image/route.ts'];
 for(const f of files){let code=await fs.readFile(path.join(root,f),'utf8');code=ts.transpileModule(code,{compilerOptions:{target:ts.ScriptTarget.ES2022,module:ts.ModuleKind.ES2022}}).outputText;code=code.replace(/from ["']cloudflare:workers["']/g,"from '"+path.join(out,'mocks.mjs')+"'").replace(/from ["']next\/headers["']/g,"from '"+path.join(out,'mocks.mjs')+"'").replace(/from ["'][^"']*chatgpt-auth["']/g,"from '"+path.join(out,'mocks.mjs')+"'").replace(/from (["'])(\.[^"']+)\1/g,(_,q,s)=>`from ${q}${s}.mjs${q}`);const dest=path.join(out,f.replace(/\.ts$/,'.mjs'));await fs.mkdir(path.dirname(dest),{recursive:true});await fs.writeFile(dest,code);}
 await fs.writeFile(path.join(out,'mocks.mjs'),`export const env=globalThis.__ccTest.env;export async function headers(){return new Headers({'x-campus-session':globalThis.__ccTest.token||''})};export async function getChatGPTUser(){return globalThis.__ccTest.owner?{userId:globalThis.__ccTest.owner}:null}`);
 const sqlite=new DatabaseSync(':memory:');for(const f of (await fs.readdir('drizzle')).filter(f=>f.endsWith('.sql')).sort())sqlite.exec(await fs.readFile('drizzle/'+f,'utf8'));
@@ -24,6 +24,7 @@ const db={
 };
 globalThis.__ccTest={env:{DB:db},owner:'test-owner',token:null};
 const auth=await import(path.join(out,'app/api/session/route.mjs')),tickets=await import(path.join(out,'app/api/tickets/route.mjs')),demo=await import(path.join(out,'app/api/demo/route.mjs')),analyze=await import(path.join(out,'app/api/analyze/route.mjs'));
+const emergencyImage=await import(path.join(out,'app/api/emergency-image/route.mjs'));
 const community=await import(path.join(out,'app/api/community/route.mjs'));
 const profile=await import(path.join(out,'app/api/profile/route.mjs')),events=await import(path.join(out,'app/api/events/route.mjs'));
 const {accounts}=await import(path.join(out,'lib/accounts.mjs'));
@@ -37,6 +38,19 @@ await signin('student-01');
 eq((await auth.POST(req(accounts.find(a=>a.id==='staff-plumbing')))).status,409);
 eq((await demo.POST(req())).status,403);
 const a=await analyze.POST(req({description:'A tap is leaking water',location:''}));const ad=await a.json();eq(ad.mode,'rules');eq(ad.category,'Plumbing');eq(ad.questions.length>0,true);
+// Emergency image AI is opt-in, student-only, and never used by normal report review.
+const image='data:image/jpeg;base64,/9j/2Q==';
+eq((await emergencyImage.POST(req({priority:'normal',photo:image}))).status,400);
+eq((await emergencyImage.POST(req({priority:'fire',photo:'not-an-image'}))).status,400);
+eq((await emergencyImage.POST(req({priority:'fire',photo:image}))).status,503);
+const oldFetch=globalThis.fetch;let aiCalls=0;
+globalThis.__ccTest.env.GEMINI_API_KEY='test-secret';globalThis.__ccTest.env.GEMINI_MODEL='test-model';
+globalThis.fetch=async(url,options)=>{aiCalls++;const payload=JSON.parse(options.body);eq(payload.contents[0].parts[1].inlineData.data,'/9j/2Q==');eq(options.headers['x-goog-api-key'],'test-secret');return Response.json({candidates:[{content:{parts:[{text:JSON.stringify({observation:'Possible smoke, but the image is uncertain.',hazard:'fire_or_smoke'})}]}}]})};
+eq((await (await analyze.POST(req({description:'Water leaking from a pipe',location:'Hostel',photo:image}))).json()).mode,'rules');eq(aiCalls,0);
+const vision=await emergencyImage.POST(req({priority:'fire',photo:image}));eq(vision.status,200);eq((await vision.json()).mode,'gemini');eq(aiCalls,1);
+globalThis.fetch=async()=>Response.json({error:'unavailable'},{status:429});eq((await emergencyImage.POST(req({priority:'emergency',photo:image}))).status,503);
+globalThis.fetch=oldFetch;delete globalThis.__ccTest.env.GEMINI_API_KEY;delete globalThis.__ccTest.env.GEMINI_MODEL;
+await signin('staff-plumbing');eq((await emergencyImage.POST(req({priority:'fire',photo:image}))).status,403);await signin('student-01');
 const body={title:'Leaking laboratory tap',description:'Water is leaking from the tap near the chemistry laboratory.',location:'Science Block · Ground floor',category:'Plumbing'};
 eq((await tickets.POST(req({...body,location:''}))).status,400);
 let r=await tickets.POST(req({...body,reporterId:'student-02',assigneeId:'staff-plumbing',status:'Resolved'}));eq(r.status,201);let t=await r.json();eq(t.reporterId,'student-01');eq(t.status,'Submitted');
