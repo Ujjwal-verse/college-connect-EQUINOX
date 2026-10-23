@@ -30,10 +30,12 @@ const profile=await import(path.join(out,'app/api/profile/route.mjs')),events=aw
 const {accounts}=await import(path.join(out,'lib/accounts.mjs'));
 const req=(body={},method='POST',origin='https://campus.test')=>new Request('https://campus.test/api/test',{method,headers:{'Content-Type':'application/json',Origin:origin,'x-campus-session':globalThis.__ccTest.token||''},body:JSON.stringify(body)});
 async function signin(id){if(globalThis.__ccTest.token)await auth.DELETE(req({},'DELETE'));const a=accounts.find(a=>a.id===id);const r=await auth.POST(req(a));assert.equal(r.status,200);const d=await r.json();globalThis.__ccTest.token=d.token;assert.equal(d.user.id,id);assert.equal(d.user.key,undefined);assert.equal(r.headers.get('Cache-Control'),'no-store');}
+async function anonymousSignin(id){globalThis.__ccTest.owner=null;const a=accounts.find(a=>a.id===id);const r=await auth.POST(req(a));assert.equal(r.status,200);const d=await r.json();globalThis.__ccTest.token=d.token;assert.equal(d.user.id,id);return d;}
 let checks=0;function eq(a,b){assert.deepEqual(a,b);checks++}
 eq((await tickets.GET()).status,401);
 eq((await auth.POST(req({role:'faculty',email:'dean@demo.university.test',key:'wrong'}))).status,401);
 eq((await auth.POST(req(accounts[0],'POST','https://other.test'))).status,403);
+await anonymousSignin('student-01');eq((await (await tickets.GET()).json()).tickets.length,0);await auth.DELETE(req({},'DELETE'));globalThis.__ccTest.token=null;globalThis.__ccTest.owner='test-owner';
 await signin('student-01');
 eq((await auth.POST(req(accounts.find(a=>a.id==='staff-plumbing')))).status,409);
 eq((await demo.POST(req())).status,403);
@@ -102,5 +104,5 @@ await signin('faculty-dean');let facultyCommittee=(await (await community.GET(co
 await signin('faculty-dean');eq((await community.PATCH(req({id:messageId},'PATCH'))).status,200);await signin('student-01');messages=(await (await community.GET(new Request('https://campus.test/api/community'))).json()).messages;eq(messages.find(m=>m.id===messageId).body,'Message removed by a moderator.');
 await auth.DELETE(req({},'DELETE'));globalThis.__ccTest.owner='test-owner';globalThis.__ccTest.token=null;await signin('student-01');
 const oldToken=globalThis.__ccTest.token;await auth.DELETE(req({},'DELETE'));eq((await tickets.GET()).status,401);globalThis.__ccTest.token=oldToken;eq((await tickets.GET()).status,401);
-await signin('faculty-dean');globalThis.__ccTest.owner='different-owner';eq((await tickets.GET()).status,401);globalThis.__ccTest.owner=null;eq((await auth.POST(req(accounts[0]))).status,401);
+await signin('faculty-dean');globalThis.__ccTest.owner='different-owner';eq((await tickets.GET()).status,401);globalThis.__ccTest.owner=null;eq((await auth.POST(req(accounts[0]))).status,409);
 console.log('PASS: '+checks+' assertions across role permissions, workflow stages, persistence, isolation, duplicate linking, login and logout.');

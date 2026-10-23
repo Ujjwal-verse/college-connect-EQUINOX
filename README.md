@@ -22,7 +22,11 @@ Campus maintenance demo with a login-first interface and separate student, worki
 | Dean Kavya | — | dean@demo.university.test | DEAN-DEMO-26 |
 | Warden Ananya | — | warden@demo.university.test | WARDEN-DEMO-26 |
 
-These are sample credentials for the demo. `.test` email addresses and zero-prefixed phone values are fictional and no emails/SMS are sent. App role sessions are eight-hour opaque per-tab tokens stored hashed in D1 and bound to the outer Site user. Different outer Site users have isolated demo data; to connect separate real campus users, provision a shared campus tenant and verified membership. This is not production university authentication: there is no real roster, email verification, phone OTP or account provisioning. Do not widen the Site's audience for real campus use without replacing sample identities with verified membership.
+These are sample credentials for the demo. `.test` email addresses and zero-prefixed phone values are fictional and no emails/SMS are sent. App role sessions are eight-hour opaque per-tab tokens stored hashed in D1. When ChatGPT Sites supplies an authenticated outer user, sessions are bound to that user; otherwise, an anonymous demo session is bound to its own opaque token so the demo login does not require a second ChatGPT sign-in inside the application. Different outer Site users have isolated demo data; to connect separate real campus users, provision a shared campus tenant and verified membership. This is not production university authentication: there is no real roster, email verification, phone OTP or account provisioning. Do not widen the Site's audience for real campus use without replacing sample identities with verified membership.
+
+### ChatGPT Sites access
+
+The application no longer rejects demo credentials just because ChatGPT Sites did not provide an outer user identity. A Site published with a private or restricted audience can still require visitors to sign in to ChatGPT before the site itself loads; that access boundary is controlled by the Site's publishing/sharing audience setting, not by this application. To let the intended demo audience open the site without that outer prompt, publish it with an audience setting that permits those visitors, while keeping the demo credentials and server-side session checks unchanged.
 
 ## Presenting the demo
 1. Sign in as Dean. Open Demo access & setup and load six examples (idempotent; existing reports preserved).
